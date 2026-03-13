@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Scans - CIS PA Compliance{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-search me-2"></i>
+                Compliance Scans
+            </h1>
+            <a href="{{ url_for('new_scan') }}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>New Scan
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                {% if scans.items %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Scan Name</th>
+                                    <th>Firewall</th>
+                                    <th>Status</th>
+                                    <th>Started</th>
+                                    <th>Duration</th>
+                                    <th>Results</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in scans.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ scan.scan_name }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ scan.firewall.name }}
+                                        <br>
+                                        <small class="text-muted">{{ scan.firewall.hostname }}</small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif scan.status == 'running' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner fa-spin me-1"></i>Running
+                                            </span>
+                                        {% elif scan.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% elif scan.status == 'pending' %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ scan.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.started_at %}
+                                            {{ scan.started_at.strftime('%m/%d/%Y') }}
+                                            <br>
+                                            <small class="text-muted">{{ scan.started_at.strftime('%H:%M UTC') }}</small>
+                                        {% else %}
+                                            <em class="text-muted">Not started</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.started_at and scan.completed_at %}
+                                            {% set duration = scan.completed_at - scan.started_at %}
+                                            {% if duration.total_seconds() < 60 %}
+                                                {{ "%.0f"|format(duration.total_seconds()) }}s
+                                            {% elif duration.total_seconds() < 3600 %}
+                                                {{ "%.1f"|format(duration.total_seconds() / 60) }}m
+                                            {% else %}
+                                                {{ "%.1f"|format(duration.total_seconds() / 3600) }}h
+                                            {% endif %}
+                                        {% elif scan.status == 'running' and scan.started_at %}
+                                            <i class="fas fa-clock text-warning"></i> In progress
+                                        {% else %}
+                                            <em class="text-muted">N/A</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-success">{{ scan.passed_checks }} passed</small>
+                                                <small class="text-danger">{{ scan.failed_checks }} failed</small>
+                                            </div>
+                                            {% if scan.passed_checks + scan.failed_checks > 0 %}
+                                                {% set compliance_pct = (scan.passed_checks / (scan.passed_checks + scan.failed_checks) * 100) | round(1) %}
+                                                <div class="progress mt-1" style="height: 6px;">
+                                                    <div class="progress-bar {% if compliance_pct >= 80 %}bg-success{% elif compliance_pct >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                         style="width: {{ compliance_pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ compliance_pct }}% compliant</small>
+                                            {% endif %}
+                                        {% elif scan.status == 'failed' and scan.error_message %}
+                                            <small class="text-danger">{{ scan.error_message[:50] }}...</small>
+                                        {% else %}
+                                            <em class="text-muted">No results</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('view_scan', scan_id=scan.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="View Results">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if scan.status == 'completed' %}
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            data-bs-toggle="dropdown" title="Download Report">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ url_for('download_report', scan_id=scan.id, format='html') }}">
+                                                                <i class="fas fa-file-code me-2"></i>HTML Report
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ url_for('download_report', scan_id=scan.id, format='json') }}">
+                                                                <i class="fas fa-file-code me-2"></i>JSON Report
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ url_for('download_report', scan_id=scan.id, format='csv') }}">
+                                                                <i class="fas fa-file-csv me-2"></i>CSV Report
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if scans.pages > 1 %}
+                    <nav aria-label="Scan pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if scans.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('list_scans', page=scans.prev_num) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in scans.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != scans.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('list_scans', page=page_num) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if scans.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('list_scans', page=scans.next_num) }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                        <h5>No Compliance Scans Found</h5>
+                        <p class="text-muted mb-4">
+                            You haven't run any compliance scans yet. Start by creating your first scan.
+                        </p>
+                        <a href="{{ url_for('new_scan') }}" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Start Your First Scan
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh page every 30 seconds if there are running scans
+document.addEventListener('DOMContentLoaded', function() {
+    const runningScans = document.querySelectorAll('.badge:contains("Running")');
+    if (runningScans.length > 0) {
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    }
+});
+</script>
+{% endblock %}

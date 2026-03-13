@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CIS PA Compliance{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="mb-1">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Compliance Dashboard
+                </h1>
+                <p class="text-muted mb-0">Monitor and manage Palo Alto firewall compliance</p>
+            </div>
+            <div>
+                <a href="{{ url_for('new_scan') }}" class="btn btn-success">
+                    <i class="fas fa-play me-1"></i>Start New Scan
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="card-title mb-0">{{ total_firewalls }}</h2>
+                        <p class="card-text mb-0">Total Firewalls</p>
+                        <small class="opacity-75">Configured devices</small>
+                    </div>
+                    <div class="text-end">
+                        <i class="fas fa-server fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="card-title mb-0">{{ active_scans }}</h2>
+                        <p class="card-text mb-0">Active Scans</p>
+                        <small>Currently running</small>
+                    </div>
+                    <div class="text-end">
+                        <i class="fas fa-spinner fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="card-title mb-0">{{ completed_scans }}</h2>
+                        <p class="card-text mb-0">Completed Scans</p>
+                        <small class="opacity-75">Total finished</small>
+                    </div>
+                    <div class="text-end">
+                        <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="card-title mb-0">v1.1.0</h2>
+                        <p class="card-text mb-0">CIS Benchmark</p>
+                        <small class="opacity-75">Current version</small>
+                    </div>
+                    <div class="text-end">
+                        <i class="fas fa-book fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Scans
+                    </h5>
+                    <a href="{{ url_for('list_scans') }}" class="btn btn-sm btn-outline-primary">
+                        View All <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_scans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Scan Name</th>
+                                    <th>Firewall</th>
+                                    <th>Status</th>
+                                    <th>Started</th>
+                                    <th>Results</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in recent_scans %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ scan.scan_name[:40] }}{% if scan.scan_name|length > 40 %}...{% endif %}</div>
+                                    </td>
+                                    <td>
+                                        <div>{{ scan.firewall.name }}</div>
+                                        <small class="text-muted">{{ scan.firewall.hostname }}</small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Completed
+                                            </span>
+                                        {% elif scan.status == 'running' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner fa-spin me-1"></i>Running
+                                            </span>
+                                        {% elif scan.status == 'failed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times me-1"></i>Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ scan.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.started_at %}
+                                            <div>{{ scan.started_at.strftime('%m/%d') }}</div>
+                                            <small class="text-muted">{{ scan.started_at.strftime('%H:%M') }}</small>
+                                        {% else %}
+                                            <em class="text-muted">N/A</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                            <div class="small">
+                                                <span class="text-success me-2">{{ scan.passed_checks }} passed</span>
+                                                <span class="text-danger">{{ scan.failed_checks }} failed</span>
+                                            </div>
+                                            {% if scan.passed_checks + scan.failed_checks > 0 %}
+                                                {% set compliance_pct = (scan.passed_checks / (scan.passed_checks + scan.failed_checks) * 100) | round(1) %}
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar {% if compliance_pct >= 80 %}bg-success{% elif compliance_pct >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                         style="width: {{ compliance_pct }}%"></div>
+                                                </div>
+                                            {% endif %}
+                                        {% elif scan.status == 'failed' and scan.error_message %}
+                                            <small class="text-danger">Error occurred</small>
+                                        {% else %}
+                                            <em class="text-muted small">No results</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_scan', scan_id=scan.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="View Results">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                        <h5>No Scans Yet</h5>
+                        <p class="text-muted mb-4">Start your first compliance scan to see results here.</p>
+                        <a href="{{ url_for('new_scan') }}" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Start Your First Scan
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-server me-2"></i>
+                    Firewall Status
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if firewalls %}
+                    {% for firewall in firewalls %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ firewall.name }}</h6>
+                            <small class="text-muted">{{ firewall.hostname }}:{{ firewall.port }}</small>
+                            {% if firewall.last_scan %}
+                                <div class="small text-success mt-1">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Last scan: {{ firewall.last_scan.strftime('%m/%d %H:%M') }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if firewall.last_scan %}
+                                <span class="badge bg-success">Scanned</span>
+                            {% else %}
+                                <span class="badge bg-warning">Not Scanned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('list_firewalls') }}" class="btn btn-outline-primary btn-sm">
+                            Manage Firewalls <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                        <h6>No Firewalls</h6>
+                        <p class="text-muted mb-3 small">Add firewalls to start compliance scanning.</p>
+                        <a href="{{ url_for('add_firewall') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add Firewall
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('new_scan') }}" class="btn btn-success">
+                        <i class="fas fa-play me-2"></i>Start New Scan
+                    </a>
+                    <a href="{{ url_for('add_firewall') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>Add Firewall
+                    </a>
+                    <a href="{{ url_for('list_scans') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>View All Scans
+                    </a>
+                </div>
+                
+                <hr class="my-3">
+                
+                <div class="small text-muted">
+                    <h6 class="small fw-bold">CIS Benchmark Coverage</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-check text-success me-1"></i> Device Setup</li>
+                        <li><i class="fas fa-check text-success me-1"></i> User Identification</li>
+                        <li><i class="fas fa-check text-success me-1"></i> High Availability</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Dynamic Updates</li>
+                        <li><i class="fas fa-check text-success me-1"></i> WildFire Settings</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Security Profiles</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

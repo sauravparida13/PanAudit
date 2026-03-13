@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - CIS PA Compliance{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-server me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Firewall Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ firewall.name if firewall else (form_data.name if form_data else '') }}" required>
+                        <div class="form-text">Enter a descriptive name for this firewall (e.g., "Production DMZ Firewall").</div>
+                        <div class="invalid-feedback">Please provide a firewall name.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hostname" class="form-label">Hostname/IP Address *</label>
+                        <input type="text" class="form-control" id="hostname" name="hostname" 
+                               value="{{ firewall.hostname if firewall else (form_data.hostname if form_data else '') }}" 
+                               pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^[a-zA-Z0-9.-]+$" 
+                               required>
+                        <div class="form-text">Enter the hostname or IP address of the firewall management interface.</div>
+                        <div class="invalid-feedback">Please provide a valid hostname or IP address.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Management Port</label>
+                        <input type="number" class="form-control" id="port" name="port" 
+                               value="{{ firewall.port if firewall else (form_data.port if form_data else '443') }}" 
+                               min="1" max="65535">
+                        <div class="form-text">HTTPS port for management interface (default: 443).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="api_key" class="form-label">API Key *</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="api_key" name="api_key" 
+                                   value="{{ firewall.api_key if firewall else (form_data.api_key if form_data else '') }}" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            XML API key for authentication. 
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#apiKeyHelp" class="text-decoration-none">
+                                <i class="fas fa-question-circle me-1"></i>How to generate API key?
+                            </a>
+                        </div>
+                        <div class="invalid-feedback">Please provide an API key.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Optional description for this firewall (e.g., location, purpose, etc.)">{{ firewall.description if firewall else (form_data.description if form_data else '') }}</textarea>
+                        <div class="form-text">Optional description to help identify this firewall.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('list_firewalls') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                        </a>
+                        <div>
+                            <button type="submit" name="test_connection" class="btn btn-outline-info me-2">
+                                <i class="fas fa-plug me-1"></i>Test Connection
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>
+                                {% if firewall %}Update{% else %}Add{% endif %} Firewall
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Key Help Modal -->
+<div class="modal fade" id="apiKeyHelp" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-key me-2"></i>How to Generate API Key
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>To generate an API key for your Palo Alto firewall, follow these steps:</p>
+
+                <div class="accordion" id="apiKeyAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingPrereq">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePrereq">
+                                <i class="fas fa-list-check me-2"></i>
+                                Prerequisites
+                            </button>
+                        </h2>
+                        <div id="collapsePrereq" class="accordion-collapse collapse show" data-bs-parent="#apiKeyAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Log in to the firewall's web interface as an administrator</li>
+                                    <li>Ensure the account has appropriate permissions for configuration access</li>
+                                    <li>Navigate to <strong>Device > Setup > Management > Authentication Settings</strong></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingMethod1">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMethod1">
+                                <i class="fas fa-globe me-2"></i>
+                                Method 1: Web Interface
+                            </button>
+                        </h2>
+                        <div id="collapseMethod1" class="accordion-collapse collapse" data-bs-parent="#apiKeyAccordion">
+                            <div class="accordion-body">
+                                <p>Use the firewall's web interface to generate the API key:</p>
+                                <ol>
+                                    <li>Go to <strong>Device > Setup > Management > Authentication Settings</strong></li>
+                                    <li>Click on the user account you want to use</li>
+                                    <li>Generate or copy the API key from the user settings</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingMethod2">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMethod2">
+                                <i class="fas fa-terminal me-2"></i>
+                                Method 2: API Call
+                            </button>
+                        </h2>
+                        <div id="collapseMethod2" class="accordion-collapse collapse" data-bs-parent="#apiKeyAccordion">
+                            <div class="accordion-body">
+                                <p>Generate the API key using a direct API call:</p>
+                                <pre class="bg-dark text-light p-3 rounded"><code>curl -k -X POST 'https://firewall-ip/api/?type=keygen&user=username&password=password'</code></pre>
+                                <p class="mt-2">Replace <code>firewall-ip</code>, <code>username</code>, and <code>password</code> with your actual values.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Security Best Practices:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Store API keys securely and never share them</li>
+                        <li>Rotate API keys regularly (recommended: every 90 days)</li>
+                        <li>Use dedicated service accounts with minimal required permissions</li>
+                        <li>Monitor API key usage and revoke unused keys</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle API key visibility
+    const toggleBtn = document.getElementById('toggleApiKey');
+    const apiKeyInput = document.getElementById('api_key');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (toggleBtn && apiKeyInput && toggleIcon) {
+        toggleBtn.addEventListener('click', function() {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+            }
+        });
+    }
+
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    }
+});
+</script>
+{% endblock %}

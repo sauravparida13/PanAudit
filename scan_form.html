@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}New Compliance Scan - CIS PA Compliance{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    New Compliance Scan
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if firewalls %}
+                    <form method="POST" action="{{ url_for('start_scan') }}">
+                        <div class="mb-4">
+                            <label for="scan_name" class="form-label">Scan Name</label>
+                            <input type="text" class="form-control" id="scan_name" name="scan_name" 
+                                   value="CIS Compliance Scan - {{ now.strftime('%Y-%m-%d %H:%M') }}" required>
+                            <div class="form-text">Enter a descriptive name for this compliance scan.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Select Firewalls to Scan</label>
+                            <div class="border rounded p-3">
+                                {% for firewall in firewalls %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="firewall_ids" 
+                                           value="{{ firewall.id }}" id="firewall_{{ firewall.id }}">
+                                    <label class="form-check-label" for="firewall_{{ firewall.id }}">
+                                        <strong>{{ firewall.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ firewall.hostname }}:{{ firewall.port }}</small>
+                                        {% if firewall.description %}
+                                            <br>
+                                            <small class="text-muted">{{ firewall.description }}</small>
+                                        {% endif %}
+                                        {% if firewall.last_scan %}
+                                            <br>
+                                            <small class="text-success">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Last scanned: {{ firewall.last_scan.strftime('%m/%d/%Y %H:%M') }}
+                                            </small>
+                                        {% else %}
+                                            <br>
+                                            <small class="text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Never scanned
+                                            </small>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                                
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAll">
+                                        Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectNone">
+                                        Select None
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Scan Configuration</h6>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                This scan will check compliance against <strong>CIS Palo Alto Firewall 10 Benchmark v1.1.0</strong> 
+                                including the following categories:
+                                <ul class="mb-0 mt-2">
+                                    <li>Device Setup (General Settings, Management Interface, Password Requirements)</li>
+                                    <li>User Identification settings</li>
+                                    <li>High Availability configuration</li>
+                                    <li>Dynamic Updates scheduling</li>
+                                    <li>WildFire security settings</li>
+                                    <li>Security Profiles configuration</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-play me-1"></i>Start Compliance Scan
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-server fa-4x text-muted mb-4"></i>
+                        <h5>No Firewalls Available</h5>
+                        <p class="text-muted mb-4">
+                            You need to add at least one firewall before you can run a compliance scan.
+                        </p>
+                        <a href="{{ url_for('add_firewall') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Your First Firewall
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllBtn = document.getElementById('selectAll');
+    const selectNoneBtn = document.getElementById('selectNone');
+    const checkboxes = document.querySelectorAll('input[name="firewall_ids"]');
+    
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            checkboxes.forEach(cb => cb.checked = true);
+        });
+    }
+    
+    if (selectNoneBtn) {
+        selectNoneBtn.addEventListener('click', function() {
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+    }
+});
+</script>
+{% endblock %}
